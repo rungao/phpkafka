@@ -21,12 +21,30 @@
 
 ## 使用方法
 
-### 消费者示例
+### 高阶消费者示例
 
 ```php
 use Octopus\Consumer;
 // 开始消费点(重复消费使用，如不设置默认从头消费)
-$offset = 86; 
+$offset = RD_KAFKA_OFFSET_STORED; 
+$topic = 'ts_click';
+$consumer = new Octopus\Consumer(['ip'=>'127.0.0.1:9002']);
+$consumer->setConsumerGroup('test-110-sxx1')
+     ->setBrokerServer('127.0.0.1')
+     ->setConsumerTopic()
+     ->setTopic('ts_click', 0, $offset)
+     ->subscribe(['ts_click'])
+     ->consumer(function($msg){
+         var_dump($msg);
+     });
+```
+
+### 低阶消费者示例
+
+```php
+use Octopus\Consumer;
+// 开始消费点(重复消费使用，如不设置默认从头消费)
+$offset = RD_KAFKA_OFFSET_STORED; 
 $topic = 'ts_click';
 $consumer = new Octopus\Consumer(['ip'=>'127.0.0.1:9002']);
 $consumer->setConsumerGroup('test-110-sxx1')
@@ -61,7 +79,7 @@ $rst = $producer->setBrokerServer()
 var_dump($rst);
 ```RdKafka
 
-## borker相关配置
+## 初始化类更多配置支持
 ```php
 $defaultConfig = [
     // 生产的dr回调

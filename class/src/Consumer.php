@@ -65,6 +65,8 @@ class Consumer
      */
     public function setConsumerGroup($groupName)
     {
+        // 配置groud.id 具有相同 group.id 的consumer 将会处理不同分区的消息
+        // 所以同一个组内的消费者数量如果订阅了一个topic， 那么消费者进程的数量多于 多于这个topic 分区的数量是没有意义的
         $this->rkConf->set('group.id', $groupName);
         return $this;
     }
@@ -87,7 +89,7 @@ class Consumer
      * @param int $offset
      * @return $this
      */
-    public function setTopic($topicName, $partition = 0, $offset = 0)
+    public function setTopic($topicName, $partition = 0, $offset = RD_KAFKA_OFFSET_STORED)
     {
         $this->rk->setTopic($topicName, $partition, $offset);
         return $this;
@@ -120,7 +122,6 @@ class Consumer
         // Set where to start consuming messages when there is no initial offset in
         // offset store or the desired offset is out of range.
         // 'smallest': start from the beginning
-        $this->topicConf->set('auto.offset.reset', 'smallest');
         $this->topicConf->set('auto.offset.reset', $this->brokerConfig['auto.offset.reset']);
 
         //设置默认话题配置
@@ -147,17 +148,19 @@ class Consumer
     public function subscribe($topicNames)
     {
         $this->consumer = new \RdKafka\KafkaConsumer($this->rkConf);
+        // 让消费者订阅主题
         $this->consumer->subscribe($topicNames);
         return $this;
     }
 
     /**
-     * 消费topic信息
+     * 消费topic信息-高阶模式
+     * 注意高阶模式需要设置setRebalanceCb回调
      * @param \Closure $handle 回调函数
      * @return void
      * @throws \RdKafka\Exception
     */
-    public function consumer(\Closure $handle)
+    public function consumerHighLevel(\Closure $handle)
     {
         while (true) {
             $message = $this->consumer->consume(120 * 1000);
@@ -179,41 +182,47 @@ class Consumer
     }
 
     /**
-     * 按不同分区的消费方式
+     * 消费方式-低阶消费
+     * 支持不同分区不同消费方式
      * @param \Closure $callback
      * @return void
     */
-    public function consumer2(\Closure $callback)
+    public function consumerLowLevel(\Closure $callback)
     {
+        $partitionNum = $this->rk->getPartition($this->rk->getCurrentTopic());
+
         /**
          * RD_KAFKA_OFFSET_BEGINNING 从0开始消费
          * RD_KAFKA_OFFSET_END 从队列最后开始消费
          * RD_KAFKA_OFFSET_STORED 从存储的offset开始消费
          */
         $this->consumerTopic->consumeStart(
-            $this->rk->getPartition($this->rk->getCurrentTopic()),
+            $partitionNum,
             $this->rk->getOffset()
         );
 
-        // 第一个参数与上面设置是冗余的，但是需要保持一致
-        // 参数1表示消费分区，这里是分区0
-        // 参数2表示同步阻塞多久,单位毫秒
-        $message = $this->consumerTopic->consume(0, 12 * 1000);
+        while (true) {
+            // 第一个参数与上面设置是冗余的，但是需要保持一致
+            // 参数1表示消费分区，这里是分区0
+            // 参数2表示同步阻塞多久,单位毫秒
+            $message = $this->consumerTopic->consume($partitionNum, 12 * 1000);
 
-        switch ($message->err) {
-            case RD_KAFKA_RESP_ERR_NO_ERROR:
-                //todo 消费
-                $callback($message);
-                break;
-            case RD_KAFKA_RESP_ERR__PARTITION_EOF:
-                echo "No more messages; will wait for more\n";
-                break;
-            case RD_KAFKA_RESP_ERR__TIMED_OUT:
-                echo "Timed out\n";
-                break;
-            default:
-                echo $message->err . ":" . $message->errstr;
-                break;
+            switch ($message->err) {
+                case RD_KAFKA_RESP_ERR_NO_ERROR:
+                    //todo 消费
+                    $callback($message);
+                    break;
+                case RD_KAFKA_RESP_ERR__PARTITION_EOF:
+                    echo "No more messages; will wait for more\n";
+                    break;
+                case RD_KAFKA_RESP_ERR__TIMED_OUT:
+                    echo "Timed out\n";
+                    break;
+                default:
+                    echo $message->err . ":" . $message->errstr;
+                    break;
+            }
         }
+
     }
 }

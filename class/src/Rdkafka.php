@@ -62,7 +62,7 @@ class RdKafka
             //'auto.commit.enable'=> 1,
             // C:高级消费者使用，偏移提交到存储的频率
             'auto.commit.interval.ms'=> 100,
-            // // 新版本已经弃用，不建议设置
+            // 新版本已经弃用，不建议设置
             //'offset.store.method'=> 'broker',
             // 新版本已经弃用，不建议设置
             //'offset.store.path'=> sys_get_temp_dir(),
