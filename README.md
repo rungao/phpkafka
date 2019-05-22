@@ -8,16 +8,11 @@
 
 [![kafka version support](https://img.shields.io/badge/kafka-0.8%200.9%201.0%201.1%20or%201.1%2B-brightgreen.svg)](#) [![php version support](https://img.shields.io/badge/php-5.3%2B-green.svg)](#) [![librdkafka version support](https://img.shields.io/badge/librdkafka-3.0.5%2B-yellowgreen.svg)](#) [![php-librdkafka](https://img.shields.io/badge/php--librdkafka-3.0.5%2B-orange.svg)](#)
 
-## 目录
-
-1. [安装](#安装)
-2. [使用](#使用)
-   * [消费](#消费)
-   * [生产](#生产)
-3. [更多配置](#更多配置)
-
-## 安装
+## 扩展安装
 > pecl install rdkafka
+
+## 库安装
+> composer require octopus/rdkafka
 
 ## 使用方法
 
@@ -25,36 +20,51 @@
 
 ```php
 use Octopus\Consumer;
-// 开始消费点(重复消费使用，如不设置默认从头消费)
-$offset = RD_KAFKA_OFFSET_STORED; 
+$config = [
+    'brokers' => 'localhost:9092',
+    'log_level' => LOG_DEBUG
+];
+$offset = RD_KAFKA_OFFSET_STORED;
 $topic = 'ts_click';
-$consumer = new Octopus\Consumer(['ip'=>'127.0.0.1:9002']);
-$consumer->setConsumerGroup('test-110-sxx1')
-     ->setBrokerServer('127.0.0.1')
-     ->setConsumerTopic()
-     ->setTopic('ts_click', 0, $offset)
-     ->subscribe(['ts_click'])
-     ->consumer(function($msg){
-         var_dump($msg);
-     });
+$groupId = 'ts_click_group';
+$partitionNum = 0;
+$consumer = new Octopus\Consumer($config);
+$consumer->setConsumerGroup($groupId)
+    ->setBrokerServer($config['brokers'])
+    ->setTopic($topic, $partitionNum, $offset)
+    ->subscribe($topic)
+    ->consumer(function($msg){
+        var_dump($msg);
+    });
 ```
 
 ### 低阶消费者示例
 
 ```php
+
 use Octopus\Consumer;
-// 开始消费点(重复消费使用，如不设置默认从头消费)
-$offset = RD_KAFKA_OFFSET_STORED; 
+$config = [
+    'brokers' => 'localhost:9092',
+    'log_level' => LOG_DEBUG
+];
 $topic = 'ts_click';
-$consumer = new Octopus\Consumer(['ip'=>'127.0.0.1:9002']);
-$consumer->setConsumerGroup('test-110-sxx1')
-     ->setBrokerServer('127.0.0.1')
-     ->setConsumerTopic()
-     ->setTopic('ts_click', 0, $offset)
-     ->subscribe(['ts_click'])
-     ->consumer(function($msg){
-         var_dump($msg);
-     });
+$groupId = 'ts_click_group';
+// 消费分区(多分区可以启多个进程)
+$partitionNum = 0;
+// 消费开始点(默认从上次记录的点)
+$offset = RD_KAFKA_OFFSET_STORED;
+$consumer = new Octopus\Consumer($config);
+$consumer->setConsumerGroup($groupId)
+    ->setBrokerServer($config['brokers'])
+    // 自定义设置分区，消费开始点
+    ->setTopic($topic, $partitionNum, $offset)
+    // 自定义C端参数设置
+    ->setTopicConf('request.required.acks', -1)
+    ->subscribe($topic, \Octopus\Consumer::LOW_LEVEL)
+    ->consumer(function($msg){
+        // 实体业务处理代码
+        var_dump($msg);
+    });     
 ```
 
 
@@ -62,22 +72,14 @@ $consumer->setConsumerGroup('test-110-sxx1')
 ```php
 use Octopus\Producer;
 $config = [
-    // brokder列表，多个使用逗号分隔
-    'brokers'=>'127.0.0.1',
-    'log_path'=> '/logs/',
-    // 自定义错误回调
-    'dr_msg_cb' => function($kafka, $message) {
-        var_dump((array)$message);
-    },
-    'error_cb' => function(){},
-    'rebalance_cb' => function(){}
+    'brokers' => 'localhost:9092',
+    'log_level' => LOG_DEBUG
 ];
-$producer = new \Octopus\Producer($config);
-$rst = $producer->setBrokerServer()
-                 ->setProducerTopic('qkl01')
-                 ->producer('qkl037', 90);
-var_dump($rst);
-```RdKafka
+$producer = new Octopus\Producer($config);
+$producer->setBrokerServer()
+    ->setProducerTopic('ts_click')
+    ->producer($msg);
+```
 
 ## 初始化类更多配置支持
 ```php
@@ -96,47 +98,4 @@ $brokerConfig = [
     'auto.commit.interval.ms'=> 100,
     'auto.offset.reset'=> 'smallest',
 ];
-```
-
-### defaultDrMsg
-```php
-function defaultDrMsg($kafka, $message) {
-    file_put_contents($this->config['log_path'] . "/dr_cb.log", var_export($message, true).PHP_EOL, FILE_APPEND);
-}
-```
-
-### defaultErrorCb
-```php
-function defaultErrorCb($kafka, $err, $reason) {
-    file_put_contents($this->config['log_path'] . "/err_cb.log", sprintf("Kafka error: %s (reason: %s)", rd_kafka_err2str($err), $reason).PHP_EOL, FILE_APPEND);
-}
-```
-
-
-### defaultRebalance
-```php
-function defaultRebalance(\RdKafka\KafkaConsumer $kafka, $err, array $partitions = null)
-{
-    switch ($err) {
-        case RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS:
-            echo "Assign: ";
-            if (is_null($this->getCurrentTopic())) {
-                $kafka->assign();
-            } else {
-                $kafka->assign([
-                    new \RdKafka\TopicPartition( $this->getCurrentTopic(), $this->getPartition($this->getCurrentTopic()), $this->getOffset($this->getCurrentTopic()) )
-                ]);
-            }
-            break;
-
-        case RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS:
-            echo "Revoke: ";
-            var_dump($partitions);
-            $kafka->assign(NULL);
-            break;
-
-        default:
-            throw new \Exception($err);
-    }
-}
 ```

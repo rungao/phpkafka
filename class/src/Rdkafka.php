@@ -156,7 +156,7 @@ class RdKafka
      * @param  \Closure $callback
      * @return void
     */
-    public function setDrMsgCb($callback)
+    private function setDrMsgCb($callback)
     {
         if (is_null($callback)) {
             return ;
@@ -172,7 +172,7 @@ class RdKafka
      * @param  \Closure $callback
      * @return void
      */
-    public function setErrorCb($callback)
+    private function setErrorCb($callback)
     {
         if (is_null($callback)) {
             return ;
@@ -189,7 +189,7 @@ class RdKafka
      * @param  \Closure $callback
      * @return void
      */
-    public function setRebalanceCb($callback)
+    private function setRebalanceCb($callback)
     {
         if (is_null($callback)) {
             return ;
@@ -226,6 +226,7 @@ class RdKafka
      * @param \RdKafka\KafkaConsumer $kafka
      * @param string $err
      * @param array $partitions
+     * @throws \Exception
      * @return void
      */
     private function defaultRebalance(\RdKafka\KafkaConsumer $kafka, $err, array $partitions = null)

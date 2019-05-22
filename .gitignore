@@ -2,4 +2,4 @@
 .git
 composer.lock
 ./idea/
-
+/vendor/

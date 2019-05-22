@@ -11,8 +11,19 @@ namespace Octopus;
 
 class Consumer
 {
+
     /**
-     * @var \RdKafka\KafkaConsumer $consumer
+     * 低级消费模式
+    */
+    const LOW_LEVEL = 1;
+
+    /**
+     * 高级消费模式
+     */
+    const HIGH_LEVEL = 2;
+
+    /**
+     * @var \RdKafka\KafkaConsumer|\RdKafka\Consumer $consumer
     */
     private $consumer;
 
@@ -47,6 +58,11 @@ class Consumer
     private $topicConf;
 
     /**
+     * @var $mode 消费模式
+    */
+    private $mode;
+
+    /**
      * @param array $config consumer配置信息
      * @return void
     */
@@ -56,6 +72,7 @@ class Consumer
         $this->rkConf = $this->rk->getConf();
         $this->config = $this->rk->getConfig();
         $this->brokerConfig = $this->rk->getBrokerConfig();
+        $this->topicConf = new \RdKafka\TopicConf();
     }
 
     /**
@@ -84,6 +101,9 @@ class Consumer
 
     /**
      * 设置服务broker
+     * RD_KAFKA_OFFSET_BEGINNING 从该 partition 的队列的最开始消费（最早的消息）
+     * RD_KAFKA_OFFSET_END 从该 partition 产生的下一个消息开始消费
+     * RD_KAFKA_OFFSET_STORED 使用偏移量存储
      * @param string $topicName
      * @param int $partition
      * @param int $offset
@@ -97,11 +117,10 @@ class Consumer
 
     /**
      * 设置consumer Topic信息
+     * @return void
     */
     public function setConsumerTopic()
     {
-        $this->topicConf = new \RdKafka\TopicConf();
-
         $this->topicConf->set('request.required.acks', $this->brokerConfig['request.required.acks']);
         // 在interval.ms的时间内自动提交确认、建议不要启动
         // $this->topicConf->set('auto.commit.enable', $this->brokerConfig['auto.commit.enable']);
@@ -114,7 +133,10 @@ class Consumer
 //        $this->topicConf->set('offset.store.path', __DIR__);
         // 设置offset的存储为broker
         // $this->topicConf->set('offset.store.method', 'broker');
-         $this->topicConf->set('offset.store.method', $this->brokerConfig['offset.store.method']);
+        if(isset($this->brokerConfig['offset.store.method'])) {
+            $this->topicConf->set('offset.store.method', $this->brokerConfig['offset.store.method']);
+        }
+
         if ($this->brokerConfig['offset.store.method'] == 'file') {
             $this->topicConf->set('offset.store.path', $this->brokerConfig['offset.store.path']);
         }
@@ -126,46 +148,75 @@ class Consumer
 
         //设置默认话题配置
         $this->rkConf->setDefaultTopicConf($this->topicConf);
-
-        return $this;
     }
 
     /**
-     * 获取kafka topic，可以自定义设置一些参数信息
-     * @return \RdKafka\TopicConf
+     * 自定义设置Consumer的TopicConf配置
+     * @param string $key
+     * @param string $value
+     * @see https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+     * @return $this
     */
-    public function getConsumerTopic()
+    public function setTopicConf($key, $value)
     {
-        return $this->topicConf;
+        $this->topicConf->set($key, $value);
+        return $this;
     }
 
     /**
      * 订阅某个topic信息
-     * @param array $topicNames
+     * @param string $topicName
+     * @param int $mode 消费模式（默认高级模式）
      * @return $this
      * @throws \RdKafka\Exception
      */
-    public function subscribe($topicNames)
+    public function subscribe($topicName, $mode = Consumer::HIGH_LEVEL)
     {
-        $this->consumer = new \RdKafka\KafkaConsumer($this->rkConf);
-        // 让消费者订阅主题
-        $this->consumer->subscribe($topicNames);
+        $this->setConsumerTopic();
+        $this->mode = $mode;
+        if($this->mode == Consumer::HIGH_LEVEL) {
+            $this->consumer = new \RdKafka\KafkaConsumer($this->rkConf);
+            // 让消费者订阅主题
+            $this->consumer->subscribe([$topicName]);
+        } else {
+            $this->consumer = new \RdKafka\Consumer($this->rkConf);
+            $this->consumerTopic = $this->consumer->newTopic($topicName, $this->topicConf);
+        }
+
         return $this;
+    }
+
+    public function consumer(\Closure $handle)
+    {
+        if($this->mode == Consumer::HIGH_LEVEL) {
+            $this->consumerHighLevel($handle);
+        } else if($this->mode == Consumer::LOW_LEVEL) {
+            $this->consumerLowLevel($handle);
+        }
     }
 
     /**
      * 消费topic信息-高阶模式
-     * 注意高阶模式需要设置setRebalanceCb回调
+     * 注意高阶模式需要设置setRebalanceCb回调(框架默认已经帮做了一个默认处理了)
      * @param \Closure $handle 回调函数
      * @return void
      * @throws \RdKafka\Exception
     */
-    public function consumerHighLevel(\Closure $handle)
+    private function consumerHighLevel(\Closure $handle)
     {
         while (true) {
-            $message = $this->consumer->consume(120 * 1000);
+            /**@var RdKafka\Message $message*/
+            $message = $this->consumer->consume(5 * 1000);
             switch ($message->err) {
                 case RD_KAFKA_RESP_ERR_NO_ERROR:
+                    /**
+                     * 具体消费代码，实际是以闭包回调函数传进来的，常用的一些方法：
+                     * 1、累计到一定数量再处理，使用use(xxx)并设置global，自行计数后处理
+                     * 2、同一个进程的消息处理是同步进行的，是顺序的，如果你设置了sleep等会影响后面的顺序
+                     * 3、如果想重跑数据有两种办法：
+                     * ① 重新启动一个groupid重新从头消费
+                     * ② 自行记录offset，比如每隔1小时记录一次offset
+                     */
                     $handle($message);
                     break;
                 case RD_KAFKA_RESP_ERR__PARTITION_EOF:
@@ -187,8 +238,9 @@ class Consumer
      * @param \Closure $callback
      * @return void
     */
-    public function consumerLowLevel(\Closure $callback)
+    private function consumerLowLevel(\Closure $callback)
     {
+        echo "partition: " . $this->rk->getPartition($this->rk->getCurrentTopic()) . ", offset start:" . $this->rk->getOffset($this->rk->getCurrentTopic());
         $partitionNum = $this->rk->getPartition($this->rk->getCurrentTopic());
 
         /**
@@ -198,18 +250,25 @@ class Consumer
          */
         $this->consumerTopic->consumeStart(
             $partitionNum,
-            $this->rk->getOffset()
+            $this->rk->getOffset($this->rk->getCurrentTopic())
         );
 
         while (true) {
-            // 第一个参数与上面设置是冗余的，但是需要保持一致
             // 参数1表示消费分区，这里是分区0
             // 参数2表示同步阻塞多久,单位毫秒
-            $message = $this->consumerTopic->consume($partitionNum, 12 * 1000);
+            /**@var RdKafka\Message $message*/
+            $message = $this->consumerTopic->consume($partitionNum, 120 * 1000);
 
             switch ($message->err) {
                 case RD_KAFKA_RESP_ERR_NO_ERROR:
-                    //todo 消费
+                    /**
+                     * 具体消费代码，实际是以闭包回调函数传进来的，常用的一些方法：
+                     * 1、累计到一定数量再处理，使用use(xxx)并设置global，自行计数后处理
+                     * 2、同一个进程的消息处理是同步进行的，是顺序的，如果你设置了sleep等会影响后面的顺序
+                     * 3、如果想重跑数据有两种办法：
+                     * ① 重新启动一个groupid重新从头消费
+                     * ② 自行记录offset，比如每隔1小时记录一次offset
+                     */
                     $callback($message);
                     break;
                 case RD_KAFKA_RESP_ERR__PARTITION_EOF:
@@ -224,5 +283,30 @@ class Consumer
             }
         }
 
+    }
+
+    /**
+     * 获取kafka topic，可以自定义设置一些参数信息
+     * @return \RdKafka\TopicConf
+     */
+    public function getConsumerTopic()
+    {
+        return $this->topicConf;
+    }
+
+    /**
+     * @return \RdKafka
+     */
+    public function getKafka()
+    {
+        return $this->rk;
+    }
+
+    /**
+     * @return \RdKafka\Conf
+     */
+    public function getKafkaConf()
+    {
+        return $this->rkConf;
     }
 }

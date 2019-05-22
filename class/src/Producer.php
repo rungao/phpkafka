@@ -29,7 +29,7 @@ class Producer
     /**
      * @var \RdKafka
      */
-    private  $rk;
+    private $rk;
 
     /**
      * @var \RdKafka\Conf
@@ -97,9 +97,9 @@ class Producer
     /**
      * 发送消息
      * @param string $msg 要发送的信息
-     * @param int $partition 分区信息
+     * @param int $partition 分区信息，RD_KAFKA_PARTITION_UA-自动分区
      * @param sting $key 消息密钥,作为主题分区使用，如根据UUID分区相同UUID就会分到一个分区
-     * @return true
+     * @return boolean
      */
     public function producer($msg, $partition = RD_KAFKA_PARTITION_UA, $key = null)
     {
@@ -112,5 +112,21 @@ class Producer
         }
 
         return true;
+    }
+
+    /**
+     * @return \RdKafka
+    */
+    public function getKafka()
+    {
+        return $this->rk;
+    }
+
+    /**
+     * @return \RdKafka\Conf
+    */
+    public function getKafkaConf()
+    {
+        return $this->rkConf;
     }
 }
