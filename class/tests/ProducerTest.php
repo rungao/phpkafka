@@ -7,6 +7,8 @@ class ProducerTest extends TestCase
 {
     /**
      * 生产者测试
+     * @throws 
+     * @return void
      */
     public function testProducer()
     {
