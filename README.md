@@ -28,7 +28,7 @@ $offset = RD_KAFKA_OFFSET_STORED;
 $topic = 'ts_click';
 $groupId = 'ts_click_group';
 $partitionNum = 0;
-$consumer = new Octopus\Consumer($config);
+$consumer = new Consumer($config);
 $consumer->setConsumerGroup($groupId)
     ->setBrokerServer($config['brokers'])
     ->setTopic($topic, $partitionNum, $offset)
@@ -53,14 +53,14 @@ $groupId = 'ts_click_group';
 $partitionNum = 0;
 // 消费开始点(默认从上次记录的点)
 $offset = RD_KAFKA_OFFSET_STORED;
-$consumer = new Octopus\Consumer($config);
+$consumer = new Consumer($config);
 $consumer->setConsumerGroup($groupId)
     ->setBrokerServer($config['brokers'])
     // 自定义设置分区，消费开始点
     ->setTopic($topic, $partitionNum, $offset)
     // 自定义C端参数设置
     ->setTopicConf('request.required.acks', -1)
-    ->subscribe($topic, \Octopus\Consumer::LOW_LEVEL)
+    ->subscribe($topic, Consumer::LOW_LEVEL)
     ->consumer(function($msg){
         // 实体业务处理代码
         var_dump($msg);

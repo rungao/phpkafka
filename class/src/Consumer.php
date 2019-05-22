@@ -240,7 +240,6 @@ class Consumer
     */
     private function consumerLowLevel(\Closure $callback)
     {
-        echo "partition: " . $this->rk->getPartition($this->rk->getCurrentTopic()) . ", offset start:" . $this->rk->getOffset($this->rk->getCurrentTopic());
         $partitionNum = $this->rk->getPartition($this->rk->getCurrentTopic());
 
         /**

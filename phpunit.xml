@@ -1,9 +1,8 @@
-<phpunit bootstrap="vendor/autoload.php" colors="true" verbose="true">
+<phpunit bootstrap="../../autoload.php" colors="true" verbose="true">
     <testsuites>
         <testsuite name="RdKafka tests">
             <directory>stubs/tests/</directory>
             <directory>class/tests/</directory>
-            <file>stubs/tests/RdKafkaTest.php</file>
         </testsuite>
     </testsuites>
 </phpunit>
