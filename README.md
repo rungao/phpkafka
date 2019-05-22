@@ -12,7 +12,7 @@
 > pecl install rdkafka
 
 ## 库安装
-> composer require octopus/rdkafka
+> composer require OctopusUtf8/Kafka
 
 ## 使用方法
 
