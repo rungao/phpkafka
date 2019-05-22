@@ -133,7 +133,7 @@ class Consumer
 //        $this->topicConf->set('offset.store.path', __DIR__);
         // 设置offset的存储为broker
         // $this->topicConf->set('offset.store.method', 'broker');
-        if(isset($this->brokerConfig['offset.store.method'])) {
+        if (isset($this->brokerConfig['offset.store.method'])) {
             $this->topicConf->set('offset.store.method', $this->brokerConfig['offset.store.method']);
         }
 
@@ -152,8 +152,8 @@ class Consumer
 
     /**
      * 自定义设置Consumer的TopicConf配置
-     * @param string $key
-     * @param string $value
+     * @param string $key 名称
+     * @param string $value 值
      * @see https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
      * @return $this
     */
@@ -174,7 +174,7 @@ class Consumer
     {
         $this->setConsumerTopic();
         $this->mode = $mode;
-        if($this->mode == Consumer::HIGH_LEVEL) {
+        if ($this->mode == Consumer::HIGH_LEVEL) {
             $this->consumer = new \RdKafka\KafkaConsumer($this->rkConf);
             // 让消费者订阅主题
             $this->consumer->subscribe([$topicName]);
@@ -186,11 +186,17 @@ class Consumer
         return $this;
     }
 
+    /**
+     * 消费方法，调用链最后调用
+     * @param \Closure $handle 实体处理函数
+     * @throws Exception
+     * @return void
+    */
     public function consumer(\Closure $handle)
     {
-        if($this->mode == Consumer::HIGH_LEVEL) {
+        if ($this->mode == Consumer::HIGH_LEVEL) {
             $this->consumerHighLevel($handle);
-        } else if($this->mode == Consumer::LOW_LEVEL) {
+        } else if ($this->mode == Consumer::LOW_LEVEL) {
             $this->consumerLowLevel($handle);
         }
     }

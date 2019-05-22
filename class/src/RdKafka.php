@@ -43,7 +43,7 @@ class RdKafka
             // 默认broker list
             'brokers' => '127.0.0.1',
             // 系统默认日志存储路径
-            'log_path'=> sys_get_temp_dir(),
+            'log_path' => sys_get_temp_dir(),
             // 消息模式
             'log_level' => LOG_DEBUG,
             // P:分发报告回调函数
@@ -57,17 +57,17 @@ class RdKafka
         $brokerConfig = [
             // C:producer的ack机制（0：异步不等待反应，1：producer leader收到确认 -1：producer follower收到确认）
             // 三种机制，性能依次递减 (producer吞吐量降低)，数据健壮性则依次递增
-            'request.required.acks'=> -1,
+            'request.required.acks' => -1,
             // 新版本已启用，不建议设置
-            //'auto.commit.enable'=> 1,
+            //'auto.commit.enable' => 1,
             // C:高级消费者使用，偏移提交到存储的频率
-            'auto.commit.interval.ms'=> 100,
+            'auto.commit.interval.ms' => 100,
             // 新版本已经弃用，不建议设置
-            //'offset.store.method'=> 'broker',
+            //'offset.store.method' => 'broker',
             // 新版本已经弃用，不建议设置
-            //'offset.store.path'=> sys_get_temp_dir(),
+            //'offset.store.path' => sys_get_temp_dir(),
             // C:当没有初始偏移量时，从哪里开始读取('smallest': start from the beginning)
-            'auto.offset.reset'=> 'smallest',
+            'auto.offset.reset' => 'smallest',
         ];
 
         $this->config = array_merge($defaultConfig, $config);
@@ -133,7 +133,7 @@ class RdKafka
 
     /**
      * 获取话题的offset
-     * @param $topicName
+     * @param string $topicName 名称
      * @return mixed
      */
     public function getPartition($topicName)
@@ -143,7 +143,7 @@ class RdKafka
 
     /**
      * 获取话题的offset
-     * @param $topicName
+     * @param string $topicName 名称
      * @return mixed
      */
     public function getOffset($topicName)
@@ -153,7 +153,7 @@ class RdKafka
 
     /**
      * 分发报告回调函数
-     * @param  \Closure $callback
+     * @param  \Closure $callback 回调函数
      * @return void
     */
     private function setDrMsgCb($callback)
@@ -169,7 +169,7 @@ class RdKafka
 
     /**
      * 设置错误后的回调方法
-     * @param  \Closure $callback
+     * @param  \Closure $callback 回调函数
      * @return void
      */
     private function setErrorCb($callback)
@@ -186,7 +186,7 @@ class RdKafka
     /**
      * 设置balance回调
      * Kafka新设置consumer、新添加broker后都会触发kafka的rebalance回调
-     * @param  \Closure $callback
+     * @param  \Closure $callback 回调函数
      * @return void
      */
     private function setRebalanceCb($callback)
@@ -202,22 +202,24 @@ class RdKafka
 
     /**
      * 系统默认分发报告回调函数
-     * @param  \RdKafka $kafka
-     * @param string $message
+     * @param  \RdKafka $kafka Kafka
+     * @param string $message 错误信息
      * @return void
      */
-    private function defaultDrMsg($kafka, $message) {
+    private function defaultDrMsg($kafka, $message)
+    {
         file_put_contents($this->config['log_path'] . "/dr_cb.log", var_export($message, true).PHP_EOL, FILE_APPEND);
     }
 
     /**
      * 系统默认错误方法处理
-     * @param  \RdKafka $kafka
-     * @param string $err
-     * @param string $reason
+     * @param  \RdKafka $kafka Kafka类
+     * @param string $err 错误信息
+     * @param string $reason 错误内容
      * @return void
      */
-    private function defaultErrorCb($kafka, $err, $reason) {
+    private function defaultErrorCb($kafka, $err, $reason)
+    {
         file_put_contents($this->config['log_path'] . "/err_cb.log", sprintf("Kafka error: %s (reason: %s)", rd_kafka_err2str($err), $reason).PHP_EOL, FILE_APPEND);
     }
 
@@ -238,15 +240,18 @@ class RdKafka
                     $kafka->assign();
                 } else {
                     $kafka->assign([
-                        new \RdKafka\TopicPartition( $this->getCurrentTopic(), $this->getPartition($this->getCurrentTopic()), $this->getOffset($this->getCurrentTopic()) )
+                        new \RdKafka\TopicPartition(
+                            $this->getCurrentTopic(),
+                            $this->getPartition($this->getCurrentTopic()),
+                            $this->getOffset($this->getCurrentTopic())
+                        )
                     ]);
                 }
                 break;
 
             case RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS:
-                echo "Revoke: ";
-                var_dump($partitions);
-                $kafka->assign(NULL);
+                echo "Revoke: ,partition: $partitions";
+                $kafka->assign(null);
                 break;
 
             default:
