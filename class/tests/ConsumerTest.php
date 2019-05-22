@@ -7,7 +7,7 @@ class ConsumerTest extends TestCase
 {
     /**
      * 低阶消费测试
-     * @throws
+     * @throws Exception
      * @return void
     */
     public function testLowLevelConsumer()
@@ -38,7 +38,7 @@ class ConsumerTest extends TestCase
 
     /**
      * 高阶消费测试
-     * @throws
+     * @throws Exception
      * @return void
      */
     public function testHighLevelConsumer()
