@@ -30,7 +30,7 @@ class ConsumerTest extends TestCase
             // 自定义C端参数设置
             ->setTopicConf('request.required.acks', -1)
             ->subscribe($topic, Consumer::LOW_LEVEL)
-            ->consumer(function ($message){
+            ->consumer(function ($message) {
                 // 实体业务处理代码
                 $this->assertInstanceOf(\RdKafka\Message::class, $message);
             });
@@ -56,7 +56,7 @@ class ConsumerTest extends TestCase
             ->setBrokerServer($config['brokers'])
             ->setTopic($topic, $partitionNum, $offset)
             ->subscribe($topic)
-            ->consumer(function ($message){
+            ->consumer(function ($message) {
                 $this->assertInstanceOf(\RdKafka\Message::class, $message);
             });
     }

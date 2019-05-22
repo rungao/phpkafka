@@ -225,10 +225,10 @@ class RdKafka
 
     /**
      * 系统默认的balance方法
-     * @param \RdKafka\KafkaConsumer $kafka
-     * @param string $err
-     * @param array $partitions
-     * @throws \Exception
+     * @param \RdKafka\KafkaConsumer $kafka kafka类
+     * @param string $err 错误信息
+     * @param array $partitions 分区
+     * @throws \Exception 异常类
      * @return void
      */
     private function defaultRebalance(\RdKafka\KafkaConsumer $kafka, $err, array $partitions = null)
