@@ -24,15 +24,11 @@ $config = [
     'brokers' => 'localhost:9092',
     'log_level' => LOG_DEBUG
 ];
-$offset = RD_KAFKA_OFFSET_STORED;
-$topic = 'ts_click';
-$groupId = 'ts_click_group';
-$partitionNum = 0;
 $consumer = new Consumer($config);
-$consumer->setConsumerGroup($groupId)
+$consumer->setConsumerGroup('ts_click_group')
     ->setBrokerServer($config['brokers'])
-    ->setTopic($topic, $partitionNum, $offset)
-    ->subscribe($topic)
+    ->setTopic('ts_click')
+    ->subscribe('ts_click')
     ->consumer(function($msg){
         var_dump($msg);
     });
@@ -47,20 +43,12 @@ $config = [
     'brokers' => 'localhost:9092',
     'log_level' => LOG_DEBUG
 ];
-$topic = 'ts_click';
-$groupId = 'ts_click_group';
-// 消费分区(多分区可以启多个进程)
-$partitionNum = 0;
-// 消费开始点(默认从上次记录的点)
-$offset = RD_KAFKA_OFFSET_STORED;
 $consumer = new Consumer($config);
-$consumer->setConsumerGroup($groupId)
+$consumer->setConsumerGroup('ts_click_group')
     ->setBrokerServer($config['brokers'])
     // 自定义设置分区，消费开始点
-    ->setTopic($topic, $partitionNum, $offset)
-    // 自定义C端参数设置
-    ->setTopicConf('request.required.acks', -1)
-    ->subscribe($topic, Consumer::LOW_LEVEL)
+    ->setTopic('ts_click', 0)
+    ->subscribe('ts_click', Consumer::LOW_LEVEL)
     ->consumer(function($msg){
         // 实体业务处理代码
         var_dump($msg);
@@ -92,7 +80,7 @@ $defaultConfig = [
     'rebalance_cb' => [$this, 'defaultRebalance']
 ];
 
-# broker（消费者）相关配置，参考Configuration.md
+# 更多配置，参考https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
 $brokerConfig = [
     'request.required.acks'=> -1,
     'auto.commit.interval.ms'=> 100,

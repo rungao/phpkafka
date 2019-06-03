@@ -57,14 +57,14 @@ class RdKafka
         $brokerConfig = [
             // C:producer的ack机制（0：异步不等待反应，1：producer leader收到确认 -1：producer follower收到确认）
             // 三种机制，性能依次递减 (producer吞吐量降低)，数据健壮性则依次递增
-            'request.required.acks' => -1,
+            'request.required.acks' => 1,
             // 新版本已启用，不建议设置
             //'auto.commit.enable' => 1,
             // C:高级消费者使用，偏移提交到存储的频率
             'auto.commit.interval.ms' => 100,
             // 新版本已经弃用，不建议设置
             //'offset.store.method' => 'broker',
-            // 新版本已经弃用，不建议设置
+            // 新版本已经默认使用broker存储(__consumer_offsets)，不建议设置
             //'offset.store.path' => sys_get_temp_dir(),
             // C:当没有初始偏移量时，从哪里开始读取('smallest': start from the beginning)
             'auto.offset.reset' => 'smallest',
@@ -77,7 +77,6 @@ class RdKafka
 
         $this->setDrMsgCb($this->config['dr_msg_cb']);
         $this->setErrorCb($this->config['error_cb']);
-        $this->setRebalanceCb($this->config['rebalance_cb']);
     }
 
     /**
@@ -189,12 +188,9 @@ class RdKafka
      * @param  \Closure $callback 回调函数
      * @return void
      */
-    private function setRebalanceCb($callback)
+    public function setRebalanceCb($callback = null)
     {
-        if (is_null($callback)) {
-            return ;
-        }
-
+        $callback = is_null($callback) ? $this->config['rebalance_cb'] : $callback;
         $this->rkConf->setRebalanceCb(function ($kafka, $err, $partitions) use ($callback) {
             call_user_func_array($callback, [$kafka, $err, $partitions]);
         });
@@ -208,7 +204,7 @@ class RdKafka
      */
     private function defaultDrMsg($kafka, $message)
     {
-        file_put_contents($this->config['log_path'] . "/dr_cb.log", var_export($message, true).PHP_EOL, FILE_APPEND);
+        file_put_contents($this->config['log_path'] . "/dr_cb.log", var_export($message, true) . PHP_EOL, FILE_APPEND);
     }
 
     /**
@@ -220,7 +216,7 @@ class RdKafka
      */
     private function defaultErrorCb($kafka, $err, $reason)
     {
-        file_put_contents($this->config['log_path'] . "/err_cb.log", sprintf("Kafka error: %s (reason: %s)", rd_kafka_err2str($err), $reason).PHP_EOL, FILE_APPEND);
+        file_put_contents($this->config['log_path'] . "/err_cb.log", sprintf("Kafka error: %s (reason: %s)", rd_kafka_err2str($err), $reason) . PHP_EOL, FILE_APPEND);
     }
 
     /**
@@ -235,18 +231,7 @@ class RdKafka
     {
         switch ($err) {
             case RD_KAFKA_RESP_ERR__ASSIGN_PARTITIONS:
-                echo "Assign: ";
-                if (is_null($this->getCurrentTopic())) {
-                    $kafka->assign();
-                } else {
-                    $kafka->assign([
-                        new \RdKafka\TopicPartition(
-                            $this->getCurrentTopic(),
-                            $this->getPartition($this->getCurrentTopic()),
-                            $this->getOffset($this->getCurrentTopic())
-                        )
-                    ]);
-                }
+                $kafka->assign($partitions);
                 break;
 
             case RD_KAFKA_RESP_ERR__REVOKE_PARTITIONS:

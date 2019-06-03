@@ -94,6 +94,20 @@ class Producer
         return $this;
     }
 
+
+    /**
+     * 自定义设置Producer的TopicConf配置
+     * @param string $key 名称
+     * @param string $value 值
+     * @see https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+     * @return $this
+     */
+    public function setTopicConf($key, $value)
+    {
+        $this->producerTopicConf->set($key, $value);
+        return $this;
+    }
+
     /**
      * 发送消息
      * @param string $msg 要发送的信息

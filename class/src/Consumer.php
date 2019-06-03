@@ -189,7 +189,7 @@ class Consumer
     /**
      * 消费方法，调用链最后调用
      * @param \Closure $handle 实体处理函数
-     * @throws Exception
+     * @throws
      * @return void
     */
     public function consumer(\Closure $handle)
@@ -197,6 +197,7 @@ class Consumer
         if ($this->mode == Consumer::HIGH_LEVEL) {
             $this->consumerHighLevel($handle);
         } else if ($this->mode == Consumer::LOW_LEVEL) {
+            $this->rk->setRebalanceCb();
             $this->consumerLowLevel($handle);
         }
     }
@@ -212,7 +213,7 @@ class Consumer
     {
         while (true) {
             /**@var RdKafka\Message $message*/
-            $message = $this->consumer->consume(5 * 1000);
+            $message = $this->consumer->consume(120 * 1000);
             switch ($message->err) {
                 case RD_KAFKA_RESP_ERR_NO_ERROR:
                     /**
