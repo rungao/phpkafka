@@ -42,6 +42,8 @@ class RdKafka
         $defaultConfig = [
             // 默认broker list
             'brokers' => '127.0.0.1',
+            // consumer消费超时时间
+            'timeout' => 120,
             // 系统默认日志存储路径
             'log_path' => sys_get_temp_dir(),
             // 消息模式

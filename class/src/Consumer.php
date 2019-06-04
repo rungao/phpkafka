@@ -213,7 +213,8 @@ class Consumer
     {
         while (true) {
             /**@var RdKafka\Message $message*/
-            $message = $this->consumer->consume(120 * 1000);
+            $timeout = $this->config['timeout'] > 0 && $this->config['timeout'] < 1200 ? (int)$this->config['timeout'] : 120;
+            $message = $this->consumer->consume($timeout * 1000);
             switch ($message->err) {
                 case RD_KAFKA_RESP_ERR_NO_ERROR:
                     /**
@@ -224,16 +225,20 @@ class Consumer
                      * ① 重新启动一个groupid重新从头消费
                      * ② 自行记录offset，比如每隔1小时记录一次offset
                      */
+                    $message->type = RD_KAFKA_RESP_ERR_NO_ERROR;
                     $handle($message);
                     break;
                 case RD_KAFKA_RESP_ERR__PARTITION_EOF:
-                    echo "No more messages; will wait for more\n";
+                    $message->type = RD_KAFKA_RESP_ERR__PARTITION_EOF;
+                    $handle($message);
                     break;
                 case RD_KAFKA_RESP_ERR__TIMED_OUT:
-                    echo "Timed out\n";
+                    $message->type = RD_KAFKA_RESP_ERR__TIMED_OUT;
+                    $handle($message);
                     break;
                 default:
-                    throw new \Exception($message->errstr(), $message->err);
+                    $message->type = RD_KAFKA_RESP_ERR_UNKNOWN;
+                    $handle($message);
                     break;
             }
         }
@@ -263,7 +268,12 @@ class Consumer
             // 参数1表示消费分区，这里是分区0
             // 参数2表示同步阻塞多久,单位毫秒
             /**@var RdKafka\Message $message*/
-            $message = $this->consumerTopic->consume($partitionNum, 120 * 1000);
+            $timeout = $this->config['timeout'] > 0 && $this->config['timeout'] < 1200 ? (int)$this->config['timeout'] : 120;
+            $message = $this->consumerTopic->consume($partitionNum, $timeout * 1000);
+
+            if(is_null($message)) {
+                $message = new \stdClass();
+            }
 
             switch ($message->err) {
                 case RD_KAFKA_RESP_ERR_NO_ERROR:
@@ -275,16 +285,20 @@ class Consumer
                      * ① 重新启动一个groupid重新从头消费
                      * ② 自行记录offset，比如每隔1小时记录一次offset
                      */
+                    $message->type = RD_KAFKA_RESP_ERR_NO_ERROR;
                     $callback($message);
                     break;
                 case RD_KAFKA_RESP_ERR__PARTITION_EOF:
-                    echo "No more messages; will wait for more\n";
+                    $message->type = RD_KAFKA_RESP_ERR__PARTITION_EOF;
+                    $callback($message);
                     break;
                 case RD_KAFKA_RESP_ERR__TIMED_OUT:
-                    echo "Timed out\n";
+                    $message->type = RD_KAFKA_RESP_ERR__TIMED_OUT;
+                    $callback($message);
                     break;
                 default:
-                    echo $message->err . ":" . $message->errstr;
+                    $message->type = RD_KAFKA_RESP_ERR_UNKNOWN;
+                    $callback($message);
                     break;
             }
         }

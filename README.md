@@ -71,7 +71,9 @@ $producer->setBrokerServer()
 
 ## 初始化类更多配置支持
 ```php
-$defaultConfig = [
+$config = [
+    // consumer超时时间(s)
+    'timeout' > 12,
     // 生产的dr回调
     'dr_msg_cb' => [$this, 'defaultDrMsg'],
     // 错误回调
@@ -81,9 +83,5 @@ $defaultConfig = [
 ];
 
 # 更多配置，参考https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
-$brokerConfig = [
-    'request.required.acks'=> -1,
-    'auto.commit.interval.ms'=> 100,
-    'auto.offset.reset'=> 'smallest',
-];
+
 ```
