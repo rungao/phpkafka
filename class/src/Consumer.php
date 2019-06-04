@@ -215,6 +215,12 @@ class Consumer
             /**@var RdKafka\Message $message*/
             $timeout = $this->config['timeout'] > 0 && $this->config['timeout'] < 1200 ? (int)$this->config['timeout'] : 120;
             $message = $this->consumer->consume($timeout * 1000);
+
+            if (is_null($message)) {
+                $message = new \stdClass();
+                $message->err = RD_KAFKA_RESP_ERR_NO_ERROR;
+            }
+
             switch ($message->err) {
                 case RD_KAFKA_RESP_ERR_NO_ERROR:
                     /**
@@ -271,8 +277,9 @@ class Consumer
             $timeout = $this->config['timeout'] > 0 && $this->config['timeout'] < 1200 ? (int)$this->config['timeout'] : 120;
             $message = $this->consumerTopic->consume($partitionNum, $timeout * 1000);
 
-            if(is_null($message)) {
+            if (is_null($message)) {
                 $message = new \stdClass();
+                $message->err = RD_KAFKA_RESP_ERR_NO_ERROR;
             }
 
             switch ($message->err) {
