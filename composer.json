@@ -1,5 +1,5 @@
 {
-    "name": "OctopusUtf8/Kafka",
+    "name": "octopus-utf8/kafka",
     "description": "Rdkafka编辑器类提示、class类使用封装",
     "license": "MIT",
     "authors": [
